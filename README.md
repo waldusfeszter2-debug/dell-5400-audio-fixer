@@ -11,7 +11,6 @@ The program runs silently in the system tray, monitors the jack state, and insta
 * **Automatic Jack Detection:** Real-time monitoring and instant response when headphones are plugged in or out.
 * **Modern Interface:** Clean GUI designed with a minimalist dark mode inspired by Apple's aesthetic.
 * **System Tray Integration:** Closes to the system tray (next to the clock) to stay out of your way during daily work.
-* **Windows Autostart:** Automatically launches upon system boot so you never have to think about it.
 * **Built-in Administrator Privileges:** Includes an embedded UAC manifest to safely request the admin rights required for restarting audio services without causing loops.
 
 ---
