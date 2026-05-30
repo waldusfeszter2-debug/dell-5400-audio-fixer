@@ -9,23 +9,38 @@ import customtkinter as ctk
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AUTO-INSTALACJA ZALEŻNOŚCI
+# SINGLETON – tylko jedna instancja (mutex Windows)
+# ─────────────────────────────────────────────────────────────────────────────
+import ctypes as _ctypes_mutex
+
+_MUTEX_NAME = "Global\\AudioFixer_SingleInstance_Mutex"
+_mutex_handle = _ctypes_mutex.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
+_mutex_already_exists = (_ctypes_mutex.windll.kernel32.GetLastError() == 183)  # ERROR_ALREADY_EXISTS
+
+if _mutex_already_exists:
+    # Inna instancja już działa – po prostu wyjdź cicho
+    sys.exit(0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTO-INSTALACJA ZALEŻNOŚCI (tylko raz przy pierwszym uruchomieniu)
 # ─────────────────────────────────────────────────────────────────────────────
 def _ensure_deps():
     """Instaluje pycaw, comtypes i pystray jeśli nie są dostępne."""
     deps = {"pycaw": "pycaw", "comtypes": "comtypes", "pystray": "pystray", "PIL": "pillow"}
+    missing = []
     for module, package in deps.items():
         try:
             __import__(module)
         except ImportError:
-            try:
-                subprocess.run(
-                    [sys.executable, "-m", "pip", "install", package, "--quiet"],
-                    check=True, capture_output=True,
-                    creationflags=subprocess.CREATE_NO_WINDOW,
-                )
-            except Exception:
-                pass
+            missing.append(package)
+
+    if missing:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", *missing, "--quiet"],
+            check=False, capture_output=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
 
 
 _ensure_deps()
@@ -639,9 +654,18 @@ if __name__ == "__main__":
             import ctypes as _ct
             script_path = os.path.abspath(sys.argv[0])
             script_dir  = os.path.dirname(script_path)
-            params      = f'"{script_path}"'
-            _ct.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, script_dir, 1)
-            sys.exit()
+
+            # Jeśli uruchomiony jako .exe – startuj samo exe z UAC
+            # Jeśli .py – startuj python.exe z tym skryptem
+            if script_path.lower().endswith(".exe"):
+                exe    = script_path
+                params = None
+            else:
+                exe    = sys.executable
+                params = f'"{script_path}"'
+
+            _ct.windll.shell32.ShellExecuteW(None, "runas", exe, params, script_dir, 1)
+            sys.exit(0)
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
